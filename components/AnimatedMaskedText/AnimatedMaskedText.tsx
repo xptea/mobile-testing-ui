@@ -1,7 +1,14 @@
-import React, { useEffect, useRef } from "react";
-import { Animated, Text, StyleSheet, Easing, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import Animated, {
+  Easing,
+  interpolate,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import type { AnimatedMaskedTextProps } from "./AnimatedMaskedText.types";
 
 export const AnimatedMaskedText: React.FC<AnimatedMaskedTextProps> = ({
@@ -11,29 +18,20 @@ export const AnimatedMaskedText: React.FC<AnimatedMaskedTextProps> = ({
   colors = ["transparent", "rgba(255,255,255,1)", "transparent"],
   baseTextColor = "#000000", // Add base text color prop
 }) => {
-  const shimmerTranslate = useRef(new Animated.Value(0)).current;
+  const shimmerTranslate = useSharedValue(-1);
   const [textWidth, setTextWidth] = React.useState(0);
   const [textHeight, setTextHeight] = React.useState(0);
 
   useEffect(() => {
-    const animate = () => {
-      shimmerTranslate.setValue(-1);
-      Animated.loop(
-        Animated.timing(shimmerTranslate, {
-          toValue: 1,
-          duration: 2000 / speed,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ).start();
-    };
-    animate();
+    shimmerTranslate.value = withRepeat(
+      withTiming(1, {
+        duration: 2000 / speed,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      false
+    );
   }, [shimmerTranslate, speed]);
-
-  const translateX = shimmerTranslate.interpolate({
-    inputRange: [-1, 1],
-    outputRange: [-textWidth * 2.2, textWidth * 2.5],
-  });
 
   return (
     <View style={{ position: "relative" }}>
@@ -69,11 +67,16 @@ export const AnimatedMaskedText: React.FC<AnimatedMaskedTextProps> = ({
             style={[
               {
                 flexDirection: "row",
-                transform: [{ translateX }],
-                opacity: shimmerTranslate.interpolate({
-                  inputRange: [-1, 1],
-                  outputRange: [0.3, 1],
-                }),
+                transform: [
+                  {
+                    translateX: interpolate(
+                      shimmerTranslate.value,
+                      [-1, 1],
+                      [-textWidth * 2.2, textWidth * 2.5]
+                    ),
+                  },
+                ],
+                opacity: interpolate(shimmerTranslate.value, [-1, 1], [0.3, 1]),
               },
             ]}
           >
