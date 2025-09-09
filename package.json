@@ -11,6 +11,7 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@clerk/clerk-expo": "^2.14.28",
     "@convex-dev/auth": "^0.0.88",
     "@expo/vector-icons": "^14.1.0",
     "@lodev09/react-native-true-sheet": "^2.0.6",

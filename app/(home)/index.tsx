@@ -5,11 +5,10 @@ import { Audio } from 'expo-av';
 import { router, useFocusEffect } from 'expo-router';
 import * as React from 'react';
 import { useCallback, useState } from 'react';
-import { SafeAreaView, ScrollView, StatusBar, View } from 'react-native';
+import { ScrollView, StatusBar, View } from 'react-native';
 
 type Note = {id: string, title: string, text: string, audioUri: string | null, createdAt: string, tags: string[]};
 
-// Function to get notes from global storage
 const getNotesFromGlobalStorage = (): Note[] => {
   console.log('Checking global storage...');
   const storage = (globalThis as any).__notesStorage;
@@ -87,7 +86,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors[colorScheme].background }}>
+    <View style={{ flex: 1, backgroundColor: Colors[colorScheme].background }}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
       
       {/* Search Bar */}
@@ -385,6 +384,6 @@ export default function HomeScreen() {
           </Touchable>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }

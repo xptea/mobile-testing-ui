@@ -1,6 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useMutation, useQuery } from 'convex/react';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Appearance, ColorSchemeName } from 'react-native';
+import { api } from '../convex/_generated/api';
 
 type ThemeMode = 'auto' | 'light' | 'dark';
 
@@ -18,20 +19,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     Appearance.getColorScheme()
   );
 
+  const savedThemeMode = useQuery(api.mutations.getThemeMode);
+  const saveThemeModeMutation = useMutation(api.mutations.saveThemeMode);
+
   useEffect(() => {
-    // Load saved theme mode
-    const loadThemeMode = async () => {
-      try {
-        const savedMode = await AsyncStorage.getItem('themeMode');
-        if (savedMode && ['auto', 'light', 'dark'].includes(savedMode)) {
-          setThemeModeState(savedMode as ThemeMode);
-        }
-      } catch (error) {
-        console.log('Error loading theme mode:', error);
-      }
-    };
-    loadThemeMode();
-  }, []);
+    if (savedThemeMode) {
+      setThemeModeState(savedThemeMode);
+    }
+  }, [savedThemeMode]);
 
   useEffect(() => {
     const updateColorScheme = () => {
@@ -53,12 +48,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [themeMode]);
 
   const setThemeMode = async (mode: ThemeMode) => {
-    try {
-      setThemeModeState(mode);
-      await AsyncStorage.setItem('themeMode', mode);
-    } catch (error) {
-      console.log('Error saving theme mode:', error);
-    }
+    setThemeModeState(mode);
+    await saveThemeModeMutation({ themeMode: mode });
   };
 
   return (

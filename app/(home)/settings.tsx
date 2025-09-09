@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 
+import { SignOutButton } from '@/components/SignOutButton';
 import { ThemedText } from '@/components/ThemedText';
 import { IconSymbol, type IconSymbolName } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
@@ -19,10 +20,7 @@ export default function SettingsScreen() {
   const separatorColor = currentColorScheme === 'dark' ? '#38383a' : '#d1d1d6';
   const textColor = Colors[currentColorScheme].text;
   const secondaryTextColor = Colors[currentColorScheme].icon;
-  
-  // Use black for light mode, blue for dark mode (for icons and checkboxes)
   const activeColor = currentColorScheme === 'light' ? '#000000' : Colors[currentColorScheme].tint;
-  // Use green for switches in both modes
   const switchActiveColor = '#4CD964';
   const inactiveColor = '#757575';
 
@@ -111,34 +109,6 @@ export default function SettingsScreen() {
         <Text className="text-3xl font-bold text-gray-900 dark:text-white">Settings</Text>
       </View>
 
-      <Section title="UPDATE">
-        <SettingRow
-          title="Version"
-          subtitle="1.0.0"
-          icon="info.circle.fill"
-        />
-        <View style={[styles.separator, { backgroundColor: separatorColor }]} />
-        <SettingRow
-          title="Auto Update"
-          icon="arrow.triangle.2.circlepath"
-          trailingComponent={
-            <Switch
-              value={autoUpdate}
-              onValueChange={(value) => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setAutoUpdate(value);
-              }}
-              trackColor={{ false: inactiveColor, true: switchActiveColor }}
-              thumbColor={currentColorScheme === 'light' ? '#ffffff' : '#ffffff'}
-            />
-          }
-          onRowPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setAutoUpdate(!autoUpdate);
-          }}
-          hasSwitch={true}
-        />
-      </Section>
 
       <Section title="NOTIFICATIONS">
         <SettingRow
@@ -195,9 +165,9 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           }
           onRowPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setThemeMode('auto');
-          }}
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setThemeMode('auto');
+              }}
         />
         <View style={[styles.separator, { backgroundColor: separatorColor }]} />
         <SettingRow
@@ -231,9 +201,9 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           }
           onRowPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setThemeMode('dark');
-          }}
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setThemeMode('dark');
+              }}
         />
         <View style={[styles.separator, { backgroundColor: separatorColor }]} />
         <SettingRow
@@ -267,9 +237,9 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           }
           onRowPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setThemeMode('light');
-          }}
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setThemeMode('light');
+              }}
         />
         <View style={[styles.separator, { backgroundColor: separatorColor }]} />
         <SettingRow
@@ -294,6 +264,27 @@ export default function SettingsScreen() {
         />
       </Section>
 
+
+      <Section title="UPDATE">
+        <SettingRow
+          title="Version"
+          subtitle="1.0.0"
+          icon="info.circle.fill"
+        />
+      </Section>
+
+      <Section title="ACCOUNT">
+        <View style={[styles.settingRow, { backgroundColor: sectionBackgroundColor }]}>
+          <View style={styles.iconContainer}>
+            <IconSymbol name="rectangle.portrait.and.arrow.right" size={20} color="#FF3B30" />
+          </View>
+          <View style={styles.textContainer}>
+            <SignOutButton />
+          </View>
+        </View>
+      </Section>
+
+      
       <View style={{ alignItems: 'center', paddingVertical: 20 }}>
         <ThemedText style={{ textAlign: 'center', color: textColor }}>
           Made with ❤️ by VoidWork.xyz
