@@ -1,339 +1,201 @@
-import * as Haptics from 'expo-haptics';
-import React, { useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, View } from 'react-native';
-
-import {
-  ActionCard,
-  AnimatedCheckbox,
-  AnimatedChip,
-  AnimatedMaskedText,
-  AnimatedSwitch,
-  BreadcrumbsList,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Collapsible,
-  ExpandableButton,
-  ExternalLink,
-  HelloWave,
-  HorizontalDivider,
-  IconSymbol,
-  ListItem,
-  SeekBar,
-  ThemedText,
-  Title,
-  Touchable
-} from '@/components';
-
+import { Card, CardContent, CardHeader, CardTitle, Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, IconSymbol, ThemedText, Touchable } from '@/components';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { Audio } from 'expo-av';
+import * as React from 'react';
+import { useEffect, useState } from 'react';
+import { Platform, ScrollView, TextInput, View } from 'react-native';
 
-const { width } = Dimensions.get('window');
+// Conditionally import Voice to handle Expo Go limitations
+let Voice: any = null;
+try {
+  Voice = require('@react-native-voice/voice').default;
+} catch (e) {
+  console.warn('Voice recognition not available in Expo Go. Use a development build for full functionality.');
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
+type Note = {id: string, text: string, audioUri: string | null};
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme() ?? 'light';
-  const [notifications, setNotifications] = useState(true);
-  const [haptics, setHaptics] = useState(true);
-  const [seekValue, setSeekValue] = useState(0.7);
-  const [chipActive, setChipActive] = useState(false);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [text, setText] = useState('');
+  const [audioUri, setAudioUri] = useState<string | null>(null);
+  const [recognition, setRecognition] = useState<any>(null);
+  const [voiceAvailable, setVoiceAvailable] = useState(Platform.OS === 'web' || !!Voice);
 
-  // Theme-aware colors
-  const backgroundColor = Colors[colorScheme].background;
-  const cardBackgroundColor = Colors[colorScheme].background;
-  const textColor = Colors[colorScheme].text;
-  const secondaryTextColor = Colors[colorScheme].icon;
-  const borderColor = colorScheme === 'dark' ? '#333333' : '#e0e0e0';
-  const shadowColor = colorScheme === 'dark' ? '#000000' : '#000000';
+  useEffect(() => {
+    Audio.requestPermissionsAsync();
+    console.log('Voice recognition available:', voiceAvailable);
+    if (Platform.OS !== 'web' && Voice) {
+      Voice.onSpeechStart = () => setIsListening(true);
+      Voice.onSpeechEnd = () => setIsListening(false);
+      Voice.onSpeechResults = (e: any) => {
+        if (e.value && Array.isArray(e.value) && e.value.length > 0 && e.value[0]) {
+          setText(prev => prev + ' ' + e.value[0]);
+        }
+      };
+      Voice.onSpeechError = (e: any) => console.log(e);
+    }
+    return () => {
+      if (Platform.OS !== 'web' && Voice) {
+        Voice.destroy().then(Voice.removeAllListeners);
+      }
+    };
+  }, [voiceAvailable]);
 
-  const handleHapticFeedback = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const startRecording = async () => {
+    try {
+      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      setRecording(recording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (recording) {
+      setIsRecording(false);
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+      setAudioUri(uri);
+    }
+  };
+
+  const startListening = async () => {
+    if (Platform.OS === 'web') {
+      const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      rec.lang = 'en-US';
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      rec.onstart = () => setIsListening(true);
+      rec.onend = () => setIsListening(false);
+      rec.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setText(prev => prev + ' ' + transcript);
+      };
+      rec.start();
+      setRecognition(rec);
+    } else if (Voice) {
+      try {
+        await Voice.start('en-US');
+      } catch (e) {
+        console.error('Voice recognition failed:', e);
+        alert('Voice recognition is not available. Please use a development build or type your note manually.');
+      }
+    } else {
+      alert('Voice recognition requires a development build. Please type your note manually.');
+    }
+  };
+
+  const stopListening = async () => {
+    if (Platform.OS === 'web') {
+      if (recognition) {
+        recognition.stop();
+        setRecognition(null);
+      }
+    } else if (Voice) {
+      try {
+        await Voice.stop();
+      } catch (e) {
+        console.error('Failed to stop voice recognition:', e);
+      }
+    }
+  };
+
+  const addNote = () => {
+    const newNote: Note = {
+      id: Date.now().toString(),
+      text: text,
+      audioUri: audioUri
+    };
+    setNotes(prev => [newNote, ...prev]);
+    setText('');
+    setAudioUri(null);
+  };
+
+  const playAudio = async (uri: string) => {
+    const { sound } = await Audio.Sound.createAsync({ uri });
+    await sound.playAsync();
   };
 
   return (
-    <ScrollView 
-      style={styles(colorScheme).container}
-      contentContainerStyle={styles(colorScheme).contentContainer}
-    >
-      {/* Hero Section */}
-      <View style={[styles(colorScheme).heroSection, { backgroundColor: Colors[colorScheme].background }]}>
-        <AnimatedMaskedText
-          style={[styles(colorScheme).heroTitle, { color: textColor }]}
-          speed={0.8}
-          colors={['transparent', colorScheme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.9)', 'transparent']}
-          baseTextColor={textColor}
-        >
-          VWisper
-        </AnimatedMaskedText>
-        <ThemedText style={[styles(colorScheme).heroSubtitle, { color: secondaryTextColor }]}>
-          Discover the power of modern React Native components
-        </ThemedText>
-        <HelloWave />
-      </View>
-
-      {/* Quick Actions */}
-      <View style={styles(colorScheme).section}>
-        <Title style={[styles(colorScheme).sectionTitle, { color: textColor }]}>Quick Actions</Title>
-        <View style={styles(colorScheme).quickActionsGrid}>
-          <ActionCard style={[styles(colorScheme).quickActionCard, { backgroundColor: cardBackgroundColor, borderColor, shadowColor }]}>
-            <Touchable onPress={handleHapticFeedback}>
-              <View style={styles(colorScheme).quickActionContent}>
-                <IconSymbol name="bell.fill" size={32} color={Colors[colorScheme].tint} />
-                <ThemedText style={[styles(colorScheme).quickActionText, { color: textColor }]}>Noti</ThemedText>
-                <AnimatedSwitch
-                  value={notifications}
-                  onValueChange={setNotifications}
-                />
-              </View>
-            </Touchable>
-          </ActionCard>
-
-          <ActionCard style={[styles(colorScheme).quickActionCard, { backgroundColor: cardBackgroundColor, borderColor, shadowColor }]}>
-            <Touchable onPress={handleHapticFeedback}>
-              <View style={styles(colorScheme).quickActionContent}>
-                <IconSymbol name="hand.tap.fill" size={32} color="#10b981" />
-                <ThemedText style={[styles(colorScheme).quickActionText, { color: textColor }]}>Haptics</ThemedText>
-                <AnimatedSwitch
-                  value={haptics}
-                  onValueChange={setHaptics}
-                />
-              </View>
-            </Touchable>
-          </ActionCard>
-        </View>
-      </View>
-
-      {/* Feature Showcase */}
-      <View style={styles(colorScheme).section}>
-        <Title style={[styles(colorScheme).sectionTitle, { color: textColor }]}>Component Showcase</Title>
-
-        {/* Interactive Cards */}
-        <View style={styles(colorScheme).cardsGrid}>
-          <Card variant="elevated" interactive pressable onPress={handleHapticFeedback}>
+    <View style={{ flex: 1, backgroundColor: Colors[colorScheme].background }}>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <ThemedText style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 20, color: Colors[colorScheme].text }}>Voice Notes</ThemedText>
+        {notes.map(note => (
+          <Card key={note.id} style={{ marginBottom: 10 }}>
             <CardHeader>
-              <CardTitle>Interactive Card</CardTitle>
-              <CardDescription>Tap me for haptic feedback</CardDescription>
+              <CardTitle>Note</CardTitle>
             </CardHeader>
             <CardContent>
-              <ThemedText>This card responds to your touch with beautiful animations.</ThemedText>
+              <ThemedText>{note.text}</ThemedText>
+              {note.audioUri && (
+                <Touchable onPress={() => playAudio(note.audioUri!)}>
+                  <IconSymbol name="play.fill" size={24} color={Colors[colorScheme].tint} />
+                </Touchable>
+              )}
             </CardContent>
           </Card>
-
-          <Card variant="outlined">
-            <CardHeader>
-              <CardTitle>SeekBar Control</CardTitle>
-              <CardDescription>Volume: {Math.round(seekValue * 100)}%</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <View style={{ marginTop: 8 }}>
-                <SeekBar
-                  value={seekValue}
-                  onValueChange={setSeekValue}
-                />
-              </View>
-            </CardContent>
-          </Card>
-        </View>
-
-        {/* Component Demo Row */}
-        <View style={styles(colorScheme).demoRow}>
-          <View style={styles(colorScheme).demoItem}>
-            <ThemedText style={styles(colorScheme).demoLabel}>Animated Chip</ThemedText>
-            <AnimatedChip
-              label="Tap Me!"
-              icon="house.fill"
-              isActive={chipActive}
-              onPress={() => {
-                setChipActive(!chipActive);
-                handleHapticFeedback();
-              }}
-            />
+        ))}
+      </ScrollView>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Touchable style={{ position: 'absolute', bottom: 20, right: 20, backgroundColor: Colors[colorScheme].tint, padding: 15, borderRadius: 50 }}>
+            <IconSymbol name="plus" size={24} color="white" />
+          </Touchable>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Note</DialogTitle>
+          </DialogHeader>
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder="Type your note..."
+            style={{ borderWidth: 1, borderColor: Colors[colorScheme].icon, padding: 10, marginVertical: 10, color: Colors[colorScheme].text }}
+            multiline
+          />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Touchable onPress={isListening ? stopListening : startListening}>
+              <ThemedText>
+                {isListening ? 'Stop Listening' : 
+                 voiceAvailable ? 'Start Voice Input' : 
+                 'Voice Input (Dev Build Only)'}
+              </ThemedText>
+            </Touchable>
+            <Touchable onPress={isRecording ? stopRecording : startRecording}>
+              <ThemedText>{isRecording ? 'Stop Recording' : 'Record Audio'}</ThemedText>
+            </Touchable>
           </View>
-
-          <View style={styles(colorScheme).demoItem}>
-            <ThemedText style={styles(colorScheme).demoLabel}>Checkbox</ThemedText>
-            <AnimatedCheckbox
-              checked={notifications}
-              onPress={() => {
-                setNotifications(!notifications);
-                handleHapticFeedback();
-              }}
-            />
-          </View>
-        </View>
-
-        {/* Expandable Content */}
-        <Collapsible title="Advanced Features">
-          <View style={styles(colorScheme).collapsibleContent}>
-            <ThemedText style={styles(colorScheme).collapsibleText}>
-              Explore our comprehensive component library with smooth animations,
-              haptic feedback, and modern design patterns.
+          {!voiceAvailable && (
+            <ThemedText style={{ fontSize: 12, color: Colors[colorScheme].icon, marginTop: 8, textAlign: 'center' }}>
+              Voice recognition requires a development build. Use "expo run:android" or "expo run:ios" for full functionality.
             </ThemedText>
-
-            <View style={styles(colorScheme).featureList}>
-              <ListItem
-                title="Smooth Animations"
-                subtitle="Reanimated-powered transitions"
-              />
-              <ListItem
-                title="Haptic Feedback"
-                subtitle="Tactile responses for better UX"
-              />
-              <ListItem
-                title="Theme Support"
-                subtitle="Light and dark mode ready"
-              />
-            </View>
-
-            <HorizontalDivider />
-
-            <View style={styles(colorScheme).buttonRow}>
-              <ExpandableButton
-                title="Get Started"
-                isLoading={false}
-                onPress={handleHapticFeedback}
-              />
-              <ExternalLink href="https://expo.dev">
-                Learn More
-              </ExternalLink>
-            </View>
-          </View>
-        </Collapsible>
-      </View>
-
-      {/* Footer */}
-      <View style={styles(colorScheme).footer}>
-        <BreadcrumbsList>
-          <ThemedText>Home</ThemedText>
-          <ThemedText>Welcome</ThemedText>
-        </BreadcrumbsList>
-        <ThemedText style={styles(colorScheme).footerText}>
-          Built with ❤️ using React Native & Expo
-        </ThemedText>
-      </View>
-    </ScrollView>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Touchable onPress={addNote} style={{ backgroundColor: Colors[colorScheme].tint, padding: 10, borderRadius: 5 }}>
+                <ThemedText style={{ color: 'white', textAlign: 'center' }}>Add Note</ThemedText>
+              </Touchable>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </View>
   );
 }
 
-const styles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors[colorScheme].background,
-  },
-  contentContainer: {
-    flexGrow: 1,
-    paddingBottom: 20,
-  },
-  heroSection: {
-    alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 20,
-    backgroundColor: Colors[colorScheme].background,
-  },
-  heroTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 16,
-    color: Colors[colorScheme].text,
-  },
-  heroSubtitle: {
-    fontSize: 18,
-    textAlign: 'center',
-    color: Colors[colorScheme].icon,
-    marginBottom: 20,
-  },
-  section: {
-    marginBottom: 32,
-    paddingHorizontal: 20,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: Colors[colorScheme].text,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  quickActionCard: {
-    flex: 1,
-    backgroundColor: Colors[colorScheme].background,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colorScheme === 'dark' ? '#333333' : '#e0e0e0',
-    shadowColor: colorScheme === 'dark' ? '#000000' : '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  quickActionContent: {
-    alignItems: 'center',
-    padding: 20,
-  },
-  quickActionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 8,
-    marginBottom: 12,
-    color: Colors[colorScheme].text,
-  },
-  cardsGrid: {
-    gap: 16,
-    marginBottom: 24,
-  },
-  demoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: Colors[colorScheme].background,
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: colorScheme === 'dark' ? '#000000' : '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  demoItem: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  demoLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors[colorScheme].icon,
-  },
-  collapsibleContent: {
-    gap: 16,
-  },
-  collapsibleText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: Colors[colorScheme].text,
-  },
-  featureList: {
-    gap: 12,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-  },
-  footer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    backgroundColor: Colors[colorScheme].background,
-  },
-  footerText: {
-    fontSize: 14,
-    color: Colors[colorScheme].icon,
-    marginTop: 16,
-    textAlign: 'center',
-  },
-});
+

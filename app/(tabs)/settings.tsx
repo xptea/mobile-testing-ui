@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { IconSymbol, type IconSymbolName } from '@/components/ui/IconSymbol';
@@ -105,9 +105,10 @@ export default function SettingsScreen() {
   );
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor }]} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <ThemedText style={[styles.headerTitle, { color: textColor }]}>Settings</ThemedText>
+    <View className="flex-1 bg-white" style={{ backgroundColor: colorScheme === 'dark' ? '#151718' : '#fff' }}>
+      <ScrollView contentContainerStyle={styles.content}>
+      <View className="pt-1 pb-1 items-center justify-center">
+        <Text className="text-3xl font-bold text-gray-900 dark:text-white">Settings</Text>
       </View>
 
       <Section title="UPDATE">
@@ -293,21 +294,13 @@ export default function SettingsScreen() {
         />
       </Section>
 
-      <Section title="ABOUT">
-        <SettingRow
-          title="Made with ❤️ by VoidWork.xyz"
-          icon="hammer.fill"
-          showChevron={true}
-          onPress={() => {
-            Alert.alert(
-              "Technology Stack",
-              "This app is built with:\n\n• React Native 0.79.6\n• Expo SDK 53\n• React 19\n• TypeScript\n• React Native Reanimated\n• React Native Gesture Handler\n\nUI Components: Custom themed components",
-              [{ text: "Sigma" }]
-            );
-          }}
-        />
-      </Section>
+      <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+        <ThemedText style={{ textAlign: 'center', color: textColor }}>
+          Made with ❤️ by VoidWork.xyz
+        </ThemedText>
+      </View>
     </ScrollView>
+    </View>
   );
 }
 
