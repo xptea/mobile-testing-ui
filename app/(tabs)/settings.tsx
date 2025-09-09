@@ -5,23 +5,23 @@ import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 're
 import { ThemedText } from '@/components/ThemedText';
 import { IconSymbol, type IconSymbolName } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function SettingsScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const { colorScheme, themeMode, setThemeMode } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [autoUpdate, setAutoUpdate] = useState(true);
   const [haptics, setHaptics] = useState(true);
-  const [themeMode, setThemeMode] = useState<'auto' | 'dark' | 'light'>('auto');
 
-  const backgroundColor = Colors[colorScheme].background;
-  const sectionBackgroundColor = colorScheme === 'dark' ? '#1c1c1e' : '#ffffff';
-  const separatorColor = colorScheme === 'dark' ? '#38383a' : '#d1d1d6';
-  const textColor = Colors[colorScheme].text;
-  const secondaryTextColor = Colors[colorScheme].icon;
+  const currentColorScheme = colorScheme ?? 'light';
+  const backgroundColor = Colors[currentColorScheme].background;
+  const sectionBackgroundColor = currentColorScheme === 'dark' ? '#1c1c1e' : '#ffffff';
+  const separatorColor = currentColorScheme === 'dark' ? '#38383a' : '#d1d1d6';
+  const textColor = Colors[currentColorScheme].text;
+  const secondaryTextColor = Colors[currentColorScheme].icon;
   
   // Use black for light mode, blue for dark mode (for icons and checkboxes)
-  const activeColor = colorScheme === 'light' ? '#000000' : Colors[colorScheme].tint;
+  const activeColor = currentColorScheme === 'light' ? '#000000' : Colors[currentColorScheme].tint;
   // Use green for switches in both modes
   const switchActiveColor = '#4CD964';
   const inactiveColor = '#757575';
@@ -105,7 +105,7 @@ export default function SettingsScreen() {
   );
 
   return (
-    <View className="flex-1 bg-white" style={{ backgroundColor: colorScheme === 'dark' ? '#151718' : '#fff' }}>
+    <View className="flex-1 bg-white" style={{ backgroundColor: currentColorScheme === 'dark' ? '#151718' : '#fff' }}>
       <ScrollView contentContainerStyle={styles.content}>
       <View className="pt-1 pb-1 items-center justify-center">
         <Text className="text-3xl font-bold text-gray-900 dark:text-white">Settings</Text>
@@ -129,7 +129,7 @@ export default function SettingsScreen() {
                 setAutoUpdate(value);
               }}
               trackColor={{ false: inactiveColor, true: switchActiveColor }}
-              thumbColor={colorScheme === 'light' ? '#ffffff' : '#ffffff'}
+              thumbColor={currentColorScheme === 'light' ? '#ffffff' : '#ffffff'}
             />
           }
           onRowPress={() => {
@@ -152,7 +152,7 @@ export default function SettingsScreen() {
                 setNotifications(value);
               }}
               trackColor={{ false: inactiveColor, true: switchActiveColor }}
-              thumbColor={colorScheme === 'light' ? '#ffffff' : '#ffffff'}
+              thumbColor={currentColorScheme === 'light' ? '#ffffff' : '#ffffff'}
             />
           }
           onRowPress={() => {
@@ -189,7 +189,7 @@ export default function SettingsScreen() {
                 <IconSymbol 
                   name="checkmark" 
                   size={14} 
-                  color={colorScheme === 'light' ? '#ffffff' : '#000000'}
+                  color={currentColorScheme === 'light' ? '#ffffff' : '#000000'}
                 />
               )}
             </TouchableOpacity>
@@ -225,7 +225,7 @@ export default function SettingsScreen() {
                 <IconSymbol 
                   name="checkmark" 
                   size={14} 
-                  color={colorScheme === 'light' ? '#ffffff' : '#000000'}
+                  color={currentColorScheme === 'light' ? '#ffffff' : '#000000'}
                 />
               )}
             </TouchableOpacity>
@@ -261,7 +261,7 @@ export default function SettingsScreen() {
                 <IconSymbol 
                   name="checkmark" 
                   size={14} 
-                  color={colorScheme === 'light' ? '#ffffff' : '#000000'}
+                  color={currentColorScheme === 'light' ? '#ffffff' : '#000000'}
                 />
               )}
             </TouchableOpacity>
@@ -283,7 +283,7 @@ export default function SettingsScreen() {
                 setHaptics(value);
               }}
               trackColor={{ false: inactiveColor, true: switchActiveColor }}
-              thumbColor={colorScheme === 'light' ? '#ffffff' : '#ffffff'}
+              thumbColor={currentColorScheme === 'light' ? '#ffffff' : '#ffffff'}
             />
           }
           onRowPress={() => {

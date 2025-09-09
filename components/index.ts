@@ -14,6 +14,7 @@ export * from "./calendar";
 export * from "./card";
 export * from "./dialog";
 export * from "./list";
+export * from "./searchbar";
 export * from "./toast";
 
 // Subfolder exports without index
